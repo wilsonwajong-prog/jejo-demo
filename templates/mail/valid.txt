@@ -1,0 +1,5 @@
+Thanks for reporting an unavailable product. Please enter the following code at every Answer field and submit the HIT and the HIT should be approved:
+{{ code }}
+Please don't reply to this email as it's fully automated.
+Please note that the code is valid for 3 hours.
+Thanks again for your efforts and good luck on MTurk!

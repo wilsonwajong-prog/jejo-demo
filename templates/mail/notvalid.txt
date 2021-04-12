@@ -1,0 +1,4 @@
+I'm afraid that we couldn't get the information that we need to generate an approval code from your email.
+Please check that you've emailed the exact complete link in HIT step 1) that should look like 'https://../../..' (right click and copy the link; opening it and copying the link from your browser address bar might not work)
+This process is fully automated so anything else you mention in the mail won't taken notice of.
+We appreciate your work on our HIT's, but unfortunately we also encounter a lot of automated submissions. Please note that we take reporting products as unavailable while they are available to save time on completing our HIT's very seriously. We manually check reports and if we notice suspicious patterns we'll manually reject the associated assignment and block your worker account.

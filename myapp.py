@@ -1,5 +1,5 @@
-from flask import Flask, render_template
-from flask.helpers import flash
+from flask import Flask, render_template, redirect
+from flask.helpers import flash, url_for
 from flask_bootstrap import Bootstrap
 from flask_wtf import FlaskForm
 from flask_wtf.recaptcha import validators
@@ -7,12 +7,26 @@ from wtforms.fields.core import StringField
 from wtforms.fields.simple import SubmitField
 from wtforms.validators import DataRequired, Email
 from mturk_unvailable import get_assin_from_str
-from helpers_csm import hash_md5, ago_from_timetime
-from helpers_email import send_email_ses
+from flask_mail import Mail, Message
+import datetime
+import hashlib
+from threading import Thread
+from flask import current_app, render_template
+from flask_mail import Message
+
+
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "hard to guess string"
+app.config["MAIL_SERVER"] = "smtp.gmail.com"
+app.config["MAIL_PORT"] = 465
+app.config["MAIL_USERNAME"] = "wajongichon@gmail.com"
+app.config["MAIL_PASSWORD"] = "1985wajong"
+app.config["MAIL_USE_TLS"] = False
+app.config["MAIL_USE_SSL"] = True
 bootstrap = Bootstrap(app)
+mail = Mail(app)
+
 
 
 #this part all about form
@@ -26,7 +40,7 @@ class ValidateForm(FlaskForm):
 
 
 
-@app.route("/notworking")
+@app.route("/notworking", methods=['GET', 'POST'])
 def notworking():
     form = ValidateForm()
     if form.validate_on_submit():
@@ -37,50 +51,34 @@ def notworking():
         assin, region, keyword = get_assin_from_str(link)
         if assin:
             product_id = assin
-            key_code = f"{product_id}{datetime.now(tz=timezone.utc).strftime('%Y-%m-%d')}"
-            code = hash_md5(key_code)[10:-10]
-            msg_body_html = f"""\
-                <html><body>
-                Thanks for reporting an unavailable product. Please enter the following code at every Answer field and submit the HIT and the HIT should be approved:<br>
-                {code}<br><br>
-                Please don't reply to this email as it's fully automated.<br>
-                Please note that the code is valid for 3 hours.<br>
-                Thanks again for your efforts and good luck on MTurk!
-                </body></html>
-                """
-            msg_body_text = f"""\
-                Thanks for reporting an unavailable product. Please enter the following code at every Answer field and submit the HIT and the HIT should be approved:
-                {code}
-
-                Please don't reply to this email as it's fully automated.
-                Please note that the code is valid for 3 hours.
-                Thanks again for your efforts and good luck on MTurk!
-                """
-            send_email_ses(email, "Here's your code", msg_body_html, msg_body_text, sender=sender_email, sender_name=sender_name)
+          #  key_code = f"{product_id}{datetime.now(tz=timezone.utc).strftime('%Y-%m-%d')}"
+          #  code = hash_md5(key_code)[10:-10]
+            key_code = product_id
+            code = hashlib.md5(key_code.encode()).hexdigest()
+            send_email(email, "Validate with ths", 'mail/valid', code=code)
             flash("Your code already send to your email")
+            return redirect(url_for('notworking'))
         else:
-            msg_body_html = f"""\
-                <html><body>
-                I'm afraid that we couldn't get the information that we need to generate an approval code from your email.<br>
-                Please check that you've emailed the exact complete link in HIT step 1) that should look like 'https://../../..' (right click and copy the link; opening it and copying the link from your browser address bar might not work)<br>
-                This process is fully automated so anything else you mention in the mail won't taken notice of.<br><br>
-                We appreciate your work on our HIT's, but unfortunately we also encounter a lot of automated submissions. Please note that we take reporting products as unavailable while they are available to save time on completing our HIT's very seriously. We manually check reports and if we notice suspicious patterns we'll manually reject the associated assignment and block your worker account.<br><br>
-                </body></html>
-                """
-            msg_body_text = f"""\
-                I'm afraid that we couldn't get the information that we need to generate an approval code from your email.
-                Please check that you've emailed the exact complete link in HIT step 1) that should look like 'https://../../..' (right click and copy the link; opening it and copying the link from your browser address bar might not work).
-                This process is fully automated so anything else you mention in the mail won't taken notice of.
-
-                We appreciate your work on our HIT's, but unfortunately we also encounter a lot of automated submissions. Please note that we take reporting products as unavailable while they are available to save time on completing our HIT's very seriously. We manually check reports and if we notice suspicious patterns we'll manually reject the associated assignment and block your worker account.
-                """
-            send_email_ses(email, "Validation failed", msg_body_html, msg_body_text, sender=sender_email, sender_name=sender_name)
+            send_email(email, "Not Valid bro", 'mail/notvalid')
             flash("your link not correct check again")
+            return redirect(url_for('notworking'))
 
     return render_template("validateform.html", form=form)
 
 
 
+def send_async_email(app, msg):
+    with app.app_context():
+        mail.send(msg)
+
+def send_email(to, subject, template, **kwargs):
+#    app = current_app.get_current_object()
+    msg = Message(subject=subject, sender='wajongichon@gmail.com', recipients=[to])
+    msg.body = render_template(template + ".txt", **kwargs)
+    msg.html = render_template(template + ".html", **kwargs)
+    thr = Thread(target=send_async_email, args=[app, msg])
+    thr.start()
+    return thr
 
 
 
